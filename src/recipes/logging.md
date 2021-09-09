@@ -31,7 +31,7 @@ First add the following crates to your `Cargo.toml` file. You may want to check 
 
 ```toml
 log = "0.4.14"
-flexi_logger = "0.17.1"
+flexi_logger = "0.18.1"
 ```
 
 Then, write some code that glues the logging crates with Godot's logging interface. `flexi-logger`, for example, requires a `LogWriter` implementation:
@@ -71,11 +71,14 @@ For the logger setup, place the code logger configuration code in your `fn init(
 To add the logging configuration, you need to add the initial configuration and start the logger inside the init function.
 ```rust
 fn init(handle: InitHandle) {
-    flexi_logger::Logger::with_str("trace")
-        .log_target(flexi_logger::LogTarget::Writer(Box::new(crate::util::GodotLogWriter {})))
+    // Pass in the log specification to the logger
+    // In this case, we are allowing all logging of trace or higher to be sent to the GodotLogWriter    
+    flexi_logger::Logger::try_with_str("trace")
+        .expect("this must be valid or logging won't work")
+        .log_to_writer(Box::new(crate::util::GodotLogWriter {}))
         .start()
-        .expect("the logger should start");
-    /* other initialization work goes here */ 
+        .unwrap();
+    /* other initialization code goes here */ 
 }
 godot_init!(init);
 ```
@@ -95,8 +98,9 @@ static TEST_LOGGER_INIT: Once = Once::new();
 #[cfg(test)]
 fn test_setup_logger() {
     TEST_LOGGER_INIT.call_once(||{
+    // In this case, we are allowing all logging of debug or higher to be sent to the standard out    
         flexi_logger::Logger::with_str("debug")
-        .log_target(flexi_logger::LogTarget::StdOut)
+        .log_to_stdout()
         .start()
         .expect("the logger should start");
     });
